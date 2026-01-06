@@ -1,0 +1,249 @@
+import React, { useState, useEffect } from "react";
+import { LayoutDashboard, Users, Plus, Bell, Activity } from "lucide-react";
+
+/* ---------------- TYPES ---------------- */
+interface Patient {
+  id: number;
+  name: string;
+  age: number;
+  gender: string;
+  status: "Waiting" | "Consultation" | "Admitted" | "Discharged";
+  condition: string;
+  lastVisit: string;
+}
+
+/* ---------------- SAMPLE DATA ---------------- */
+const INITIAL_PATIENTS: Patient[] = [
+  {
+    id: 1,
+    name: "Sarah Johnson",
+    age: 34,
+    gender: "Female",
+    status: "Admitted",
+    condition: "Flu Symptoms",
+    lastVisit: "2023-10-24",
+  },
+  {
+    id: 2,
+    name: "Michael Chen",
+    age: 45,
+    gender: "Male",
+    status: "Waiting",
+    condition: "Routine Checkup",
+    lastVisit: "2023-10-23",
+  },
+];
+
+/* ---------------- APP ---------------- */
+export default function App() {
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [showAddModal, setShowAddModal] = useState(false);
+
+  const [newPatient, setNewPatient] = useState({
+    name: "",
+    age: "",
+    gender: "Male",
+    condition: "",
+  });
+
+  /* -------- LOAD OFFLINE DATA -------- */
+  useEffect(() => {
+    const saved = localStorage.getItem("his_patients");
+    if (saved) {
+      setPatients(JSON.parse(saved));
+    } else {
+      setPatients(INITIAL_PATIENTS);
+    }
+  }, []);
+
+  /* -------- SAVE OFFLINE DATA -------- */
+  useEffect(() => {
+    localStorage.setItem("his_patients", JSON.stringify(patients));
+  }, [patients]);
+
+  /* -------- ADD PATIENT -------- */
+  const handleAddPatient = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const ageNumber = parseInt(newPatient.age);
+    if (isNaN(ageNumber) || ageNumber <= 0) {
+      alert("Please enter a valid age");
+      return;
+    }
+
+    const patient: Patient = {
+      id: Date.now(),
+      name: newPatient.name,
+      age: ageNumber,
+      gender: newPatient.gender,
+      status: "Waiting",
+      condition: newPatient.condition,
+      lastVisit: new Date().toISOString().split("T")[0],
+    };
+
+    setPatients([patient, ...patients]);
+    setShowAddModal(false);
+    setNewPatient({ name: "", age: "", gender: "Male", condition: "" });
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex text-slate-800">
+      {/* SIDEBAR */}
+      <aside className="w-64 bg-slate-900 text-white hidden md:flex flex-col">
+        <div className="p-6 border-b border-slate-800 flex gap-3 items-center">
+          <div className="bg-blue-500 p-2 rounded-lg">
+            <Activity />
+          </div>
+          <div>
+            <h1 className="font-bold">J&A Care</h1>
+            <p className="text-xs text-slate-400">HIS Management</p>
+          </div>
+        </div>
+
+        <nav className="p-4 space-y-2">
+          <SidebarItem
+            label="Dashboard"
+            icon={<LayoutDashboard size={18} />}
+            active={activeTab === "dashboard"}
+            onClick={() => setActiveTab("dashboard")}
+          />
+          <SidebarItem
+            label="Patients"
+            icon={<Users size={18} />}
+            active={activeTab === "patients"}
+            onClick={() => setActiveTab("patients")}
+          />
+        </nav>
+      </aside>
+
+      {/* MAIN */}
+      <main className="flex-1 flex flex-col">
+        <header className="h-16 bg-white border-b flex items-center justify-between px-6">
+          <h2 className="font-bold text-lg">
+            {activeTab === "dashboard" ? "Dashboard" : "Patients"}
+          </h2>
+          <Bell />
+        </header>
+
+        <div className="p-6">
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="mb-4 bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+          >
+            <Plus size={16} /> Register Patient
+          </button>
+
+          <div className="bg-white rounded-xl border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="p-3 text-left">Name</th>
+                  <th className="p-3">Age / Gender</th>
+                  <th className="p-3">Condition</th>
+                  <th className="p-3">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {patients.map((p) => (
+                  <tr key={p.id} className="border-t">
+                    <td className="p-3">{p.name}</td>
+                    <td className="p-3 text-center">
+                      {p.age} / {p.gender}
+                    </td>
+                    <td className="p-3">{p.condition}</td>
+                    <td className="p-3">
+                      <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">
+                        {p.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+
+      {/* MODAL */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+          <form
+            onSubmit={handleAddPatient}
+            className="bg-white p-6 rounded-xl w-full max-w-md space-y-3"
+          >
+            <h3 className="font-bold">Register Patient</h3>
+            <input
+              className="w-full border px-3 py-2 rounded"
+              placeholder="Name"
+              value={newPatient.name}
+              onChange={(e) =>
+                setNewPatient({ ...newPatient, name: e.target.value })
+              }
+              required
+            />
+            <input
+              type="number"
+              className="w-full border px-3 py-2 rounded"
+              placeholder="Age"
+              value={newPatient.age}
+              onChange={(e) =>
+                setNewPatient({ ...newPatient, age: e.target.value })
+              }
+              required
+            />
+            <select
+              className="w-full border px-3 py-2 rounded"
+              value={newPatient.gender}
+              onChange={(e) =>
+                setNewPatient({ ...newPatient, gender: e.target.value })
+              }
+            >
+              <option>Male</option>
+              <option>Female</option>
+            </select>
+            <input
+              className="w-full border px-3 py-2 rounded"
+              placeholder="Condition"
+              value={newPatient.condition}
+              onChange={(e) =>
+                setNewPatient({ ...newPatient, condition: e.target.value })
+              }
+              required
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="flex-1 border rounded py-2"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="flex-1 bg-blue-600 text-white rounded py-2"
+              >
+                Save
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- SIDEBAR ITEM ---------------- */
+function SidebarItem({ label, icon, active, onClick }: any) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg ${
+        active ? "bg-blue-600 text-white" : "text-slate-400 hover:bg-slate-800"
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
